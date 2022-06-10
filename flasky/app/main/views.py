@@ -16,10 +16,16 @@ def index():
         db.session.add(post)
         db.session.commit()
         return redirect(url_for('.index'))
+<<<<<<< HEAD
     page = request.args.get('page', 1, type=int)
     pagination = Post.query.order_by(Post.timestamp.desc()).paginate(page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'], error_out=False)
     posts = pagination.items
     return render_template('index.html', form=form, posts=posts, pagination=pagination)
+=======
+        
+    posts = Post.query.order_by(Post.timestamp.desc()).all()
+    return render_template('index.html', form=form, posts=posts)
+>>>>>>> origin/Chapter-11--Blog-posts
 
 @main.route('/user/<username>')
 def user(username):
