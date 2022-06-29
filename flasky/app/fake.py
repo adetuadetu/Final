@@ -31,6 +31,5 @@ def posts(count=100):
         p = Post(body=fake.text(),
                  timestamp=fake.past_date(),
                  author=u)
-        db.session.no_autoflush(p)
         db.session.add(p)
     db.session.commit()
