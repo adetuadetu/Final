@@ -5,12 +5,12 @@ from app import create_app, db
 from app.models import User, AnonymousUser, Role, Permission, Follow
 
 class UserModelTestCase(unittest.TestCase):
-
-    def setUP(self):
+    def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
+        Role.insert_roles()
 
     def tearDown(self):
         db.session.remove()
@@ -75,7 +75,7 @@ class UserModelTestCase(unittest.TestCase):
         with self.app.test_request_context('/'):
             gravatar = u.gravatar()
             gravatar_256 = u.gravatar(size=256)
-            gravatar_pg = u.gravatar(ratin='pg')
+            gravatar_pg = u.gravatar(rating='pg')
             gravatar_retro = u.gravatar(default='retro')
         self.assertTrue('https://secure.gravatar.com/avatar/' +
                         'd4c74594d841139328695756648b6bd6'in gravatar)

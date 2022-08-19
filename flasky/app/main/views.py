@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import render_template, session, redirect, url_for, current_app, abort, flash, request, make_response
+from flask import render_template, session, redirect, url_for, current_app, abort, flash, request, make_response, current_app
 from flask_login import login_required, current_user
 from . import main
 from .forms import PostForm, EditProfileForm, EditProfileAdminForm, CommentForm
@@ -7,6 +7,19 @@ from .. import db
 from ..models import User ,Role ,Permission , Post, Comment
 from ..email import send_email
 from ..decorators import admin_required, permission_required
+
+
+
+@main.route('/shutdown')
+def server_shutdown():
+    if not current_app.testing:
+        abort(404)
+    shutdown = request.environ.get('werkzeug.server.shutdown')
+    if not shutdown:
+        abort(500)
+    shutdown()
+    return 'Shutting down...'
+
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
