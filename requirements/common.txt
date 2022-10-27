@@ -11,7 +11,7 @@ Flask-Moment==0.5.1
 Flask-SQLAlchemy==2.2
 Flask-WTF==0.14.2
 itsdangerous==0.24
-Jinja2==3.1.2
+jinja2==3.0.3
 Mako==1.0.7
 MarkupSafe==2.1
 python-dateutil==2.6.1

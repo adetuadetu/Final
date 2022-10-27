@@ -6,7 +6,7 @@ ENV FLASK_CONFIG docker
 RUN adduser -D flasky
 USER flasky
 
-WORKDIR /OneDrive/Documents/flasky/Final
+WORKDIR /OneDrive/Documents/flasky/final
 
 COPY requirements requirements
 RUN python -m venv venv
