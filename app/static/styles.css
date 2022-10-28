@@ -28,3 +28,8 @@ div.post-content {
     margin-left: 48px;
     min-height: 48px;
 }
+
+div.navbar {
+    background-color: aquamarine;
+
+}
