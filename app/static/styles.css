@@ -29,7 +29,7 @@ div.post-content {
     min-height: 48px;
 }
 
-div.navbar {
+div.navbar.navbar-inverse {
     background-color: aquamarine;
 
 }
