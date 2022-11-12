@@ -28,7 +28,6 @@ div.post-content {
     margin-left: 48px;
     min-height: 48px;
 }
-
-div.navbar-header {
-    background-color: rgb(7, 78, 178);
+.navbar-custom{
+    background-color: rgb(34, 84, 219);
 }
