@@ -28,3 +28,7 @@ div.post-content {
     margin-left: 48px;
     min-height: 48px;
 }
+
+div.container {
+    background-color: rgb(7, 78, 178);
+}
