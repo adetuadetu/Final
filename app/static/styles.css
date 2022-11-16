@@ -28,6 +28,10 @@ div.post-content {
     margin-left: 48px;
     min-height: 48px;
 }
-.navbar-custom{
-    background-color: rgb(34, 84, 219);
+.gradient-custom {
+    background: linear-gradient(to right, rgba(231, 136, 54),rgba(216, 89, 43));
+}
+
+.hover-overlay {
+    background: linear-gradient(45deg,rgba(29, 236, 197, 0.5), rgba(91, 14, 214, 0.5) 100%);
 }
