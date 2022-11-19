@@ -18,6 +18,8 @@
 14. Performane testing
 15. Deployment using Docker
 
+
+
 ## 1. Templates
 
 ### What are templates?
@@ -52,14 +54,14 @@ $ pip install flask-bootstrap
 ```
 Flask extensions are initialized at the same time as the application instance this is done in the __init__.py file below is an example of how this is done 
 
-```Flask
+```Python
 from flask_bootstrap import Bootstrap
 # ...
 bootstrap = Bootstrap()
 ```
 the bootstrap extension is initialized without the application instance so you can dynamically make configuration changes without the application being automatically initialized before any changes can be made. The solution is the delay the initialization of the appllication into a factory function called create_app() shown in the example below 
 
-```Flask
+```Python
 def create_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
@@ -67,10 +69,24 @@ def create_app(config_name):
 ```
 The configuration settings stored within one of the classes defined in the config.py file can be imported straight into the application using the from_object() shown above which is available in app.config configuration object.
 
-Once flask is initialized a bootstrap base template with all the Bootstrap files and general structure becomes available to the application by referencing it using 
+Once flask is initialized a bootstrap base template with all the Bootstrap files and general structure becomes available to the application, the jinja2 (extends) directive implements the template inheritence by referencing  
 
-```Flask
+```Python
 {% extends "bootstrap/base.html" %}
 ```
 
+the template provided by Flask-Bootstrap creates a skeleton web page that includes all CSS and JavaScript files from Bootstrap 
 
+### Custom error pages
+Within Flask you can define custom error pages that are consistent with the design of the web application using an app.errorhandler decorater which is similar to a view function. This is in the below example
+
+```Python
+@main.app_errorhandler(403)
+def forbidden(e):
+    if request.accept_mimetypes.accept_json and \
+            not request.accept_mimetypes.accept_html:
+        response = jsonify({'error': 'forbidden'})
+        response.status_code = 403
+        return response
+    return render_template('403.html'), 403
+```
