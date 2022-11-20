@@ -90,3 +90,50 @@ def forbidden(e):
         return response
     return render_template('403.html'), 403
 ```
+error handlers produce templates like view function but they also return a numeric error value which can be implemented as an argument ass shown above 
+
+### Static files 
+Within Flask you can reference to static files which are saved in the subdirectory called static. Shown in the example below.
+
+```Python
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+```
+
+## 2. Web Forms
+
+### How to implement web form in flask 
+Forms generally need to have a flow of data going to the server in the sense of a users email address or password and a flow of data going from the server to the user like a confirmation email after the user has registered. All this can be done easier using the Flask-WTF extension which is installed using pip as shown below.
+
+```Pip
+$ pip install flask-wtf
+```
+
+unlike other flask extensions Flask-WTF does not need to be initialized on the application level but it expects the application to have a secret key configured. This key is used to secure from any cross-site request forgery (CSRF), making it more secure for users. This is shown below.
+
+```Python
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+```
+
+Flask-WTF creates security tokens for all the forms and stores them in the user session, which is protected with a cryptographic signature produced from the secret key
+
+### What are form classes 
+When using Flask-WTF each style of web forms is represented in the server by a class. Depending on the class, the fields in the form will be different and represented by an object. Each field object has one or more validators attached making sure that any data written into the fields are valid. Below is an example.
+
+```Python
+class NameForm(FlaskForm):
+    name = StringField('What is your name?', validators=[DataRequired()])
+    submit = SubmitField('Submit')
+```
+
+### How to render forms
+Instead of rendering forms manually we can use a great helper function wich is provided by the Flask-Bootstrap extension. Within the template file as shown below.
+
+```Python
+{% import "bootstrap/wtf.html" as wtf %}
+{{ wtf.quick_form(form) }}
+```
+
+
+
+
