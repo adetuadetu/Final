@@ -134,6 +134,112 @@ Instead of rendering forms manually we can use a great helper function wich is p
 {{ wtf.quick_form(form) }}
 ```
 
+### How to handle forms in view functions
+For example the index() view function has to render the from and it also had to recieve the data entered by the user. Example below.
+
+```Python
+@main.route('/', methods=['GET', 'POST'])
+def index():
+    form = PostForm()
+    if current_user.can(Permission.WRITE) and form.validate_on_submit():
+        post = Post(body=form.body.data, author=current_user._get_current_object())
+        db.session.add(post)
+        db.session.commit()
+        return redirect(url_for('.index'))
+    page = request.args.get('page', 1, type=int)
+    show_followed = False
+    if current_user.is_authenticated:
+        show_followed = bool(request.cookies.get('show_followed', ''))
+    if show_followed:
+        query = current_user.followed_posts
+    else:
+        query = Post.query
+    pagination = query.order_by(Post.timestamp.desc()).paginate(page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'], error_out=False)
+    posts = pagination.items
+    return render_template('index.html', form=form, posts=posts, show_followed=show_followed, pagination=pagination)
+```
+
+In the example above, the method argument is used as a handler for POST or GET separately or together. When not specified the view function is registered only to GET requests.
+
+### Redirects and User Sessions
+Usually if you enter any data into a form and send it, when you refresh the page all your submited data will be sent again. We obviously dont want that so the way to tackle this issue is to respond to POST requests with a redirect which is essentially a URL for the page.
+
+In order for the application to remember the users name, for example instead of storing that data within a local variable we will store it in a session.
+
+### Message Flashing
+Its good to let the user know if the form request has worked or theyve forgotten to fill something out thats what message flashing is good for. Flask includes the functionality as a core feature this is done as show in the example below.
+
+```Python
+flash('Your profile has been updated.')
+```
+but this flash message within view.py isnt enough we also have to reference it in the template file like shown below.
+
+```Python
+{% block content %}
+<div class="container">
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning">
+        <button tape="button"class="close" data-dismiss="alert">&times;</button>
+        {{ message }}
+    </div>
+{% endfor %}
+```
+
+
+## 3. Databases
+
+### What are databases ?
+Databases store data from applications in an organized way. The application can then issue queries to retrieve specific data. Most common databases stemming from a relational model called SQL databases aka Structured Query Langauge. There are also different types of databases like document-oriented or key-value databases aka NoSQL databases.
+
+### What database style did i use and why
+I used a relational database called MySQL and from this im using the SQLAlchemy package. SQLAlchemy allows me to work at a higher level with regular Python objects instead of databse entities
+
+### Getting started 
+Firstly i have to download the flask-sqlalchemy extension
+
+```Pip
+$ pip install flask-sqlalchemy
+```
+
+The url of the application database has to be configured as the key
+
+```Python
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+        'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
+```
+
+in the flask config.py file 
+
+### Model definition
+The term model is used to describe the persistant entities used by the application an example of this is a python class with attributes the match the columns of a corresponding database. The database instance from FLASK-SQLAlchemy comes with a base class for models as well as helper classes and functions. Here is an example of my Roles and User models.
+
+```Python
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    default = db.Column(db.Boolean, default=False, index=True)
+    permissions = db.Column(db.Integer)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+```
+
+### Relationships between tables
+Relational databases are great because you can reference other databases using foreign key. In the example below i will demonstrate how the one-to-many relation between role and user is established 
+
+```Python
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+
+role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+```
+the role.id column is defined as a foreign key and that establishes the relationship between the two tables. The reason for this relationship is because many users can have the same role so instead of creating a seperate table for each user it makes more sense to reference the same one.
+
+### Database Use in View Functions
+ 
+
+
 
 
 
