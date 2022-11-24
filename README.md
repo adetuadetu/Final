@@ -347,7 +347,9 @@ This function releis on two configuration keys to specify where the emails will 
 To avoid delays during request handling the email send function can moved to a background thread which is shown in the example above.
 
 ## 5. Large Application Structure
+Even though having my whole application in a single file would be possible this would be absolutely awful therefore i structured the source code for my application into multiple files within a repository to make it easier to locate specific parts of the application therefore easier to repair and diagnose.
 
+![large application structure](large_application_structure.png)
 
 
 
