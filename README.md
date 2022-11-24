@@ -237,7 +237,117 @@ role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 the role.id column is defined as a foreign key and that establishes the relationship between the two tables. The reason for this relationship is because many users can have the same role so instead of creating a seperate table for each user it makes more sense to reference the same one.
 
 ### Database Use in View Functions
- 
+ A lot of database operations can be directly handled in the view function as shown below.
+
+ ```Python
+ @main.route('/edit-profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.name = form.name.data
+        current_user.location = form.location.data
+        current_user.about_me = form.about_me.data
+        db.session.add(current_user._get_current_object())
+        db.session.commit()
+        flash('Your profile has been updated.')
+        return redirect(url_for('.user', username=current_user.username))
+    form.name.data = current_user.name
+    form.location.data = current_user.location
+    form.about_me.data = current_user.about_me
+    return render_template('edit_profile.html', form=form)
+```
+the template for this from also has to be created 
+
+```Python
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+
+{% block title %}Flasky - Edit Profile{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Edit Your Profile</h1>
+</div>
+<div class="col-md-4">
+    {{ wtf.quick_form(form) }}
+</div>
+{% endblock %}
+```
+### Database Migrations with Flask-Migrate
+Whenever you need to update your database models then your database will need to be updated too. Luckily instead of having to destroy the old tables in order to create the new ones, also losing all the data within them in the process there is a better process called flask-migrate which is an extension of flask this is downloaded using as shown below.
+
+```Pip
+$ pip install flask-migrate
+```
+once flask-migrate is initialized within __init__.py you can change the model classes however you wish, once you have made any changes you must create a migration script which you can do in the terminal window as shown below 
+
+```bash
+$ flask db migrate -m "initial migration"
+```
+
+When you've done all this you may now update the dtabase using 
+
+```bash
+$ flask db upgrade
+```
+
+Using the flask db upgrade command updates the database without having to first destroy, lose all data then rebuild it therefore this method is a great alternative 
+
+
+## 4. Email
+Many forms of applications need to send email confirmation when new users register. The best way to do this is with a flask extension called flask-mail which wraps the smptlib and integrates it with Flask. To install this i used the below example.
+
+```bash
+$ pip install flask-mail
+```
+This extension connect to a Simple Mail Transfer Protocol (SMPT) server and passes emails to it for delivery. Below is an example of the config.py file which this smpt is configured in.
+
+```python
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') 
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.office365.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
+        ['true', 'on', '1']
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+```
+
+### Integrating Emails with the Application
+So we dont have to create a new email for every single new user we can create a function that does this automatically within the email.py file which is shown below.
+
+```python
+from threading import Thread
+from flask import current_app, render_template
+from flask_mail import Message
+from . import mail
+
+
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
+
+
+def send_email(to, subject, template, **kwargs):
+    app = current_app._get_current_object()
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + ' ' + subject,
+                    sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    thr = Thread(target=send_async_email, args=[app, msg])
+    thr.start()
+    return thr
+```
+
+This function releis on two configuration keys to specify where the emails will be coming from. The send_email() function takes the destination address, subject, template for the email being sent and a list of key word arguments. The keyword arguments passed by the caller are given to the render_template() so that they can be used by the templates that produce the emails
+
+### Sending Asynchronous Email
+To avoid delays during request handling the email send function can moved to a background thread which is shown in the example above.
+
+## 5. Large Application Structure
+
 
 
 
