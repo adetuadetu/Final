@@ -349,7 +349,7 @@ To avoid delays during request handling the email send function can moved to a b
 ## 5. Large Application Structure
 Even though having my whole application in a single file would be possible this would be absolutely awful therefore i structured the source code for my application into multiple files within a repository to make it easier to locate specific parts of the application therefore easier to repair and diagnose.
 
-![large application structure](/Final/app/static/large_application_structure.jpg "Large application structure")
+![large application structure](/Final/app/static/largeapplicationstructure.jpg "Large application structure")
 
 
 
