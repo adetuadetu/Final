@@ -351,7 +351,329 @@ Even though having my whole application in a single file would be possible this 
 
 ![large application structure](/app/static/largeapplicationstructure.jpg "Large application structure")
 
+above is an example oif how i layed out the structure of my applications repository. The structure consist of four top level folders 
+- The application lives inside a package called app
+- The migrations folder, containing the database migration scripts
+- Unit tests are wihtin the test folder 
+- venv folder contains the Python virtual enviroment as before 
 
+There are also a couple files that are included 
+- requirements.txt consisting of all the libraries to run the application 
+- config.py which stores all the configuration settings
+-flasky.py which includes the applicatoin instance and a few tasks that help manage the application 
+
+### Configuration Options
+Applications often need multiple versions of configuration sets a perfect example of this is development, testing and production enviroments. To combat this issue we will instill a heirarchy of configuration settings shown in the example below.
+
+```python
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'thisisnotthekey1970'
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.office365.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in \
+        ['true', 'on', '1']
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
+    FLASKY_MAIL_SENDER = 'Flasky Admin <tstu232@outlook.com>'
+    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
+    SSL_REDIRECT = False
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_RECORD_QUERIES = True
+    FLASKY_POSTS_PER_PAGE = 20
+    FLASKY_FOLLOWERS_PER_PAGE = 50
+    FLASKY_COMMENTS_PER_PAGE = 30
+    FLASKY_SLOW_DB_QUERY_TIME = 0.5
+
+    @staticmethod
+    def init_app(app):
+        pass
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+        'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
+
+class TestingConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
+        'sqlite://'
+    WTF_CSRF_ENABLED = False
+
+class ProductionConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+        'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+
+
+    @classmethod
+    def init_app(cls, app):
+        Config.init_app(app)
+
+        # email errors to the administrators
+        import logging
+        from logging.handlers import SMTPHandler
+        credentials = None
+        secure = None
+        if getattr(cls, 'MAIL_USERNAME', None) is not None:
+            credentials = (cls.MAIL_USERNAME, cls.MAIL_PASSWORD)
+            if  getattr(cls, 'MAIL_USE_TLS', None):
+                secure = ()
+        mail_handler = SMTPHandler(
+            mailhost=(cls.MAIL_SERVER, cls.MAIL_PORT),
+            fromaddr=cls.FLASKY_MAIL_SENDER,
+            toaddrs=[cls.FLASKY_ADMIN],
+            subject=cls.FLASKY_MAIL_SUBJECT_PREFIX + 'Application Error',
+            credentials=credentials,
+            secure=secure)
+        mail_handler.setLevel(logging.ERROR)
+        app.logger.addHandler(mail_handler)
+
+
+class HerokuConfig(ProductionConfig):
+    SSL_REDIRECT = True if os.environ.get('DYNO') else False
+
+
+    @classmethod
+    def init_app(cls, app):
+        ProductionConfig.init_app(app)
+
+
+        # handle reverse proxy server headers
+        try:
+            from werkzeug.middleware.proxy_fix import ProxyFix
+        except ImportError:
+            from werkzeug.contrib.fixers import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app)
+
+
+        # log to stderr
+        import logging 
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
+class DockerConfig(ProductionConfig):
+    @classmethod
+    def init_app(cls, app):
+        ProductionConfig.init_app(app)
+
+        # log to stderr
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
+
+config = {
+    'development': DevelopmentConfig,
+    'testing': TestingConfig,
+    'production': ProductionConfig,
+    'heroku': HerokuConfig,
+    'docker': DockerConfig,
+
+    'default': DevelopmentConfig
+}
+```
+
+The configuration base class which is located at the top of the file, are to universal configuration setting for all enviroments. The subclasses define settings that are specific for that enviroment.
+
+To make configuration safer most settings can be imported from the as enviroment variables 
+
+### Application Package
+This is where all the application code, templates and static files live the folder is called app.
+
+### The use of an Application Factory
+Usualy in a single file version of an application it would be completely exceptable to have all the configuration setting created globally but the issue with this is it makes it extremely difficult to make dynamic changes because by the time the script is running the application instance is already running, so it would be too late to make configuration changes. This is even more important when it comes to unit testing because it is sometimes necessary to run the applicatoin under different configuration settings for better test coverage. Below is an example.
+
+```python
+from flask import Flask, render_template
+from flask_bootstrap import Bootstrap
+from flask_mail import Mail
+from flask_moment import Moment
+from flask_sqlalchemy import SQLAlchemy
+from config import config 
+from flask_login import LoginManager
+from flask_pagedown import PageDown
+
+bootstrap = Bootstrap()
+mail = Mail()
+moment = Moment()
+db = SQLAlchemy()
+pagedown = PageDown()
+
+login_manager = LoginManager()
+login_manager.login_view ='auth.login'
+
+def create_app(config_name):
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+
+    bootstrap.init_app(app)
+    mail.init_app(app)
+    moment.init_app(app)
+    db.init_app(app)
+    login_manager.init_app(app)
+    pagedown.init_app(app)
+
+
+    if app.config['SSL_REDIRECT']:
+        from flask_sslify import SSLify
+        sslify = SSLify(app)
+
+
+    from .main import main as main_blueprint
+    app.register_blueprint(main_blueprint)
+
+    from .auth import auth as auth_blueprint 
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+
+    from .api import api as api_blueprint
+    app.register_blueprint(api_blueprint, url_prefix='/api/v1')
+    
+    return app
+```
+
+This constructor imports most of the Flask extensions but without the application instance therefore creating them uninitialized. The create_app() function is the application factory which takes as an argument the name of configuration to use for the application. The configuration settings stored in one of the classes defined in config.py can then be imported using the from_object() method. The configuratoin object is selected from the the config dictionary so once the application is created and configured, the extensions can be initialized by calling on the init_app() on the extensions that were created earlier
+
+The factory function has created the application instance but applications created with the factory function in its current state are incomplete as they are missing routes and cutom error handlers
+
+### Implementing Application Functionality in a Blueprint 
+When using an application factory although great for dynamic changes it creates an issue for routes. Usualy in a single file application the application instance exists in the global scope, so this makes it easier for routes to be defined by the app.route decorator. But now that the application is created at runtime the app.route decorator only begins to exist after the create_app() function is invoked, which is too late. The same applies to error handlers.
+
+We can solve this issue by using a method called Blueprints. A Blueprint is similar to an application in the sense that it can also define routes and errorhandlers. The difference is that when the blueprint defines all these routes and errorhandlers they all remain in a dormant state untill the Blueprint is registered with the application. By using the Blueprints in a global scope, the routes an errorhandlers can be defined in the same way as a single file application. Below is an example of a Blueprint.
+
+```python
+from flask import Blueprint
+
+main = Blueprint('main', __name__)
+
+from . import views, errors
+from ..models import Permission
+
+
+@main.app_context_processor
+def inject_permissions():
+    return dict(Permission=Permission)
+```
+
+Blueprints work by intantiating an object of class Blueprint. The constructor for this class takes two arguments: the Blueprint name and the module package where the Blueprint is located. In most applications __name__ variable is enough as a second value for the second argument.
+
+The routes and errorhandlers are stored in the same folder as the Blueprint file. By importing these files within the Blueprint it associates them with the Blueprint. It is important to import the modules at the bottom of the Blueprint file to avoid errors due to circular dependencies.
+
+The Blueprint is registered to the application inside the create_app() function as shown below.
+
+```python
+def create_app(config_name):
+    #...
+
+    from .main import main as main_blueprint
+    app.register_blueprint(main_blueprint)
+
+    #...
+
+    return app
+```
+
+### Application Script 
+The flasky.py module which is located in the top level of the directory is where the application instance is defined. Shown in example below.
+
+```python
+import os
+
+
+COV = None
+if os.environ.get('FLASK_COVERAGE'):
+    import coverage
+    COV = coverage.coverage(branch=True, include='app/*')
+    COV.start()
+
+import sys
+import click
+from flask_migrate import Migrate, upgrade
+from app import create_app, db
+from app.models import User, Follow, Role, Permission, Post, Comment
+
+app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+migrate = Migrate(app, db)
+
+@app.shell_context_processor
+def make_shell_context():
+    return dict(db=db, User=User, Follow=Follow, Role=Role,
+                Permission=Permission, Post=Post, Comment=Comment)
+```
+The script begins by creating an application. The configuration for this new application is obtained from FLASK_CONFIG, if no configuration is defined then the default configuration will be used.
+
+### Requirements File
+In order to keep track of all the libraries that are needed within the application it is good practice to store them all within a requirements.txt folder
+
+### Unit Testing
+For testing i used the standard unittest package that comes from the Python standard library. The setUp() and tearDown() methods of the test case class run before and after each test, and any methods that have the name test_ are executed as tests.
+
+When the test runs the setUp() method creates an enviroment as close to that of a running application. Firstly it creates an application which is configured for testing and activates its context. This step ensures that tests have the same access to the current_app like regular requests do. Then it creates a brand-new database using SQLAlchemy specifically for testing purposes, this is done using the create_all() method. Once all testing is done the database and application are torn down using tearDown().
+
+
+## User Authentication 
+Most applications have the goal of providing a personalised user expierience like remembering the users preferences or registration details. The most comon way to authenticate users is through the user providing a name and password and preferably a secret question that only they know the answer to.
+
+The authentication process requires a frankenstein combination of packages which all work harmonesly together.
+- Flask-Login
+- Werkzeug
+- itsdangerous
+- Flask-Mail
+- Flask-Bootstrap
+- Flask-WTF
+
+### Password Security
+To ensure the safety of the passwords that all user provide there is a method called password hashing which takes the password given by the user, adds random components to it then applies several one-way cryptographic transformation to it. Once this process is finished you have a hash belonging to a specific user that can used to verify users. Since this hash is whats stored in the database even if it were hacked the hashes would be undoable therefore making it an extremely safe method of password storage.
+
+### Werkzeug Password Hashing
+Below is an example of how werzeugs security module hashes passwords.
+
+```python
+generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+```
+When this function has run it returns a password hash as a string that can be stored in the database instead of the actual password. 
+
+When the user tries to log in again the check_password_hash(hash, password) method is used which takes the password hash that was previously created and the password the user has just provided to check when hashed if it matches the current hashed password
+
+### Creating an Authentication Blueprint
+As good practice i implemented a Blueprint file for all my authenticatoins routes instead of having every single route on the same file this makes it a lot easier to maintain and update in the future. Example below.
+
+```python
+from flask import Blueprint 
+
+auth = Blueprint('auth' __name__)
+
+from . import views
+```
+
+The app/auth/views.py module imports the Blueprint and the defines all the routes related to authentication using the route decorater. Below is an example of this method.
+
+```python
+from flask import render_template, redirect, request, url_for, flash
+from flask_login import login_user, logout_user, login_required, current_user
+from . import auth
+from .. import db
+from ..models import User
+from ..email import send_email
+from .forms import LoginForm, RegistrationForm, ChangePasswordForm, PasswordResetRequestForm, PasswordResetForm, ChangeEmailForm
+
+@auth.before_app_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.ping()
+        if not current_user.confirmed \
+                and request.endpoint \
+                and request.blueprint != 'auth' \
+                and request.endpoint != 'static':
+            return redirect(url_for('auth.unconfirmed'))
+```
 
 
 
