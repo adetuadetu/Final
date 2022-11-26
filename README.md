@@ -675,5 +675,88 @@ def before_request():
             return redirect(url_for('auth.unconfirmed'))
 ```
 
+The auth Blueprint needs to be attached to the applicatoin through the create_app() factory function as shown in he example below.
+
+```python 
+    from .auth import auth as auth_blueprint 
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+```
+
+### User Authenticatoin with Flask-Login
+When a user logs in to the application their state has to be held whilst they navigate multiple pages, Flask-Login is a specialized extension for this process without being tied to a specific authentication mechanism. Pip install below.
+
+```bash
+$ pip install flask-login
+```
+Flask-Login is commonly used with User objects, for them to work together Flask-Login needs the User models to implement a few common properties such as 
+- is_authenticated
+- is_active
+- is_anonymous
+- get_id()
+
+There is an easier way to implement all of these methods using the model class Flask-Login provides called UserMixin shown in the example below.
+
+```python
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key = True)
+    email = db.Column(db.String(64), unique=True, index=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    password_hash = db.Column(db.String(128))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    confirmed = db.Column(db.Boolean, default=False)
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
+    avatar_hash = db.Column(db.String(32))
+    posts = db.relationship('Post', backref='author', lazy='dynamic')
+    followed = db.relationship('Follow',
+                               foreign_keys=[Follow.follower_id],
+                               backref=db.backref('follower', lazy='joined'),
+                               lazy='dynamic',
+                               cascade='all, delete-orphan')
+    followers = db.relationship('Follow',
+                                foreign_keys=[Follow.followed_id],
+                                backref=db.backref('followed', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')
+    comments = db.relationship('Comment', backref='author', lazy='dynamic')
+```
+
+Flask-login is initialized in the application factory as shown below.
+
+```python
+from flask import Flask, render_template
+from flask_bootstrap import Bootstrap
+from flask_mail import Mail
+from flask_moment import Moment
+from flask_sqlalchemy import SQLAlchemy
+from config import config 
+from flask_login import LoginManager
+from flask_pagedown import PageDown
+
+bootstrap = Bootstrap()
+mail = Mail()
+moment = Moment()
+db = SQLAlchemy()
+pagedown = PageDown()
+
+login_manager = LoginManager()
+login_manager.login_view ='auth.login'
+
+def create_app(config_name):
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+
+    bootstrap.init_app(app)
+    mail.init_app(app)
+    moment.init_app(app)
+    db.init_app(app)
+    login_manager.init_app(app)
+    pagedown.init_app(app)
+```
 
 
