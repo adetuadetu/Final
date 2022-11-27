@@ -8,15 +8,7 @@
 4. Email
 5. Large application structure
 6. How User authentication is implemented
-7. How User Roles functions
-8. Individual User Profiles
-9. Adding Blog posts
-10. Implementing Followers
-11. Leaving User comments
-12. Application Programming Interfaces
-13. Testing 
-14. Performane testing
-15. Deployment using Docker
+7. Deployment using Docker
 
 
 
@@ -759,4 +751,169 @@ def create_app(config_name):
     pagedown.init_app(app)
 ```
 
+## Deployment using Docker 
 
+There are many ways to deploy an application for example you could use heroku but in my case i decided to go with Docker because of its efficiency and recourcefulness when creating the application. A feature of Docker is its containers and images it creates, containers work as a type of virtual machine that run on top of a kernel of the host operating machine like a clone. These virtual machines are much more lightweight becuase instead of each virtual machine having its own kernel and virtual hardware the virtualization stops at the kernel.
+
+### Instalation of Docker 
+Firstly i went on to the Docker website and followed the instructions there to download Docker CE on my development system. After the installation process is complete i was able to access docker from my command terminal as shown below.
+
+```bash
+$ docker version
+error during connect: This error may indicate that the docker daemon is not running.: Get "http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.24/version": open //./pipe/docker_engine: The system cannot find the file specified.
+Client:
+ Cloud integration: v1.0.29
+ Version:           20.10.17
+ API version:       1.41
+ Go version:        go1.17.11
+ Git commit:        100c701
+ Built:             Mon Jun  6 23:09:02 2022
+ OS/Arch:           windows/amd64
+ Context:           default
+ Experimental:      true
+```
+
+### How i built a Container Image
+The first thing you have to make sure to make before you can use containers is to create an image for the application. An image is essentialy a snapshot of a containers filesystem this is then used as a template when starting new containers. Docker expects the instructions to create an image to be inside of a folder called Dockerfile shown in the example below.
+
+```python
+FROM python:3.6-alpine
+
+ENV FLASK_APP flasky.py
+ENV FLASK_CONFIG docker
+
+RUN adduser -D flasky
+USER flasky
+
+WORKDIR /OneDrive/Documents/flasky/final
+
+COPY requirements requirements
+RUN python -m venv venv
+RUN venv/bin/pip install -r requirements/docker.txt
+
+COPY app app
+COPY migrations migrations
+COPY flasky.py config.py boot.sh ./
+
+#runtime configuration
+EXPOSE 5000
+
+ENTRYPOINT ["./boot.sh"]
+```
+
+The FROM command is required in all Dockerfile files and it is the base of creating an image. In most cases this image is going to be available publicly in Docker Hub this is Dockers contiainer image repository.
+
+The ENV command defines the runtime enviroment variables. This command takes two arguments the variable name and its value. FLASK_APP and FLASK_CONFIG are also included so all the exact same configuration setting are duplicated. Docker will be given its own configuration class as shown below.
+
+```python
+class DockerConfig(ProductionConfig):
+    @classmethod
+    def init_app(cls, app):
+        ProductionConfig.init_app(app)
+
+        # log to stderr
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+```
+
+The RUN command executes a command in the form of the context of the container image. The first time this is executed a flasky user is automatically created inside the container. The adduser command is part of the Alpine Linux and is available in the base image of the application selected by the FROM command. 
+
+The USER command selects the user which will create the container and also the user for the remaining commands within the Dockerfile. By default Docker uses the root user by default.
+
+The WORKDIR command defines the top level directory where the application is going to be installed.
+
+The COPY command copies all the files in the local system and pastes them onto the container
+
+The last RUN commands create the virtual enviroment and install all the requirements into it. This comes from the dedicated requirements.txt file that was created.
+
+The EXPOSE command defines which port the application will use 
+
+And the final command ENTRYPOINT will define how the application is executed when the container is initialized. Below is an example of this file.
+
+```python
+#!/bin/sh
+source venv/bin/activate
+
+while true; do
+    flask deploy
+    if [[ "$?" == "0" ]]; then
+        break
+    fi
+    echo Deploy command failed, retrying in 5 secs...
+    sleep 5
+done
+
+exec gunicorn -b :5000 --access-logfile -  --error-logfile - flasky:app
+```
+
+When the above scriot starts to run it creates the virtual enviroment first then it runs the applications deploy command thiswill create a new database and insert the default roles. Then a GUNICORN server listening on port 5000 is started. 
+
+
+### How i built a container image
+in the terminal window i typed as shown below.
+
+```bash
+$ docker build -t example:latest
+```
+
+The -t argument gives a name and tag to the docker container image
+
+When the docker build command successfuly runs the build container image is stored in a local image repository. This can be accessed as shown in the example below.
+
+```bash
+$ docker images
+REPOSITORY        TAG       IMAGE ID       CREATED       SIZE
+final             latest    85aa28c29482   10 days ago   80.8MB
+```
+
+### How i ran a container
+Once the container image has been created all that you need to do next is run it. This is shown in the example below.
+
+```bash
+$ docker run --name examplename -dp 8000:5000 example:latest
+```
+
+The --name lets you name the container, this is optional but makes it a lot easier in the future when reviewing containers.
+
+The -dp is a combination -d creating the container in detached mode which allows you to run the application without the dependency of the local system and -p maps port 8000 on the local machine to 5000 inside the container. Below is an example of a container within docker.
+
+```bash
+$ docker ps
+CONTAINER ID   IMAGE          COMMAND       CREATED       STATUS         PORTS                    NAMES
+7a3150c08f40   final:latest   "./boot.sh"   10 days ago   Up 4 seconds   0.0.0.0:8000->5000/tcp   final
+```
+
+### Container Orchestration Docker Compose
+Containerized applications usually consists of several running containers. As the applicatin grows in complexity it need more containers. Some applications are going to need additional services like message queues or caches. Application that have to handle high loads or need to be fault tolerant will need to scale out by running several instances behinf the load balancer. As the amount of containers that are part of the same application increases it will become more and more difficult to coordinate all them only using Docker. To help with this issue a container orchestration framework is built on top of Docker. Below is an example of one.
+
+```python
+version: '3'
+services:
+  flasky:
+    build: .
+    ports:
+      - "8000:5000"
+    env_file: .env
+    restart: always
+    links:
+      - mysql:dbserver
+  mysql:
+    image: "mysql/mysql-server:5.7"
+    env_file: .env-mysql
+    restart: always
+```
+
+The file shown above is written in YAML, which is simple and implements hierarchial structures that consist of key-value maps and lists.
+
+### What my .env file consists of
+When you set the restart key to always it provides a simple way for Docker to automatically restart the container if it exists unexpectidly. Below is an example of my .env file.
+
+```python
+FLASK_APP=flasky.py
+FLASK_CONFIG=docker
+MAIL_USERNAME=**********
+MAIL_PASSWORD=**************
+```
