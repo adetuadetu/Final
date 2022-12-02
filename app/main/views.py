@@ -1,11 +1,11 @@
 from datetime import datetime
-from flask import render_template, session, redirect, url_for, current_app, abort, flash, request, make_response, current_app
+from flask import render_template, session, redirect, url_for, current_app, abort, flash, request, make_response
 from flask_login import login_required, current_user
 from flask_sqlalchemy import get_debug_queries
 from . import main
 from .forms import PostForm, EditProfileForm, EditProfileAdminForm, CommentForm
 from .. import db
-from ..models import User ,Role ,Permission , Post, Comment
+from ..models import User, Role, Permission, Post, Comment
 from ..email import send_email
 from ..decorators import admin_required, permission_required
 
@@ -59,7 +59,7 @@ def user(username):
     user = User.query.filter_by(username=username).first_or_404()
     page = request.args.get('page', 1, type=int)
     pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
-        page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],
+        page=page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],
         error_out=False)
     posts = pagination.items
     return render_template('user.html', user=user, posts=posts,
@@ -127,7 +127,7 @@ def post(id):
         page = (post.comments.count() - 1) // \
             current_app.config['FLASKY_COMMENTS_PER_PAGE'] + 1
     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(
-        page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
+        page=page, per_page=current_app.config['FLASKY_COMMENTS_PER_PAGE'],
         error_out=False)
     comments = pagination.items
     return render_template('post.html', posts=[post], form=form,
