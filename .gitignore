@@ -4,7 +4,6 @@
 *.so
 
 # Packages
-.env
 *.egg
 *.egg-info
 dist
@@ -41,3 +40,7 @@ nosetests.xml
 
 # Virtual environment
 venv
+
+# Enviroment files
+.env
+.env-mysql
