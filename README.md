@@ -1,4 +1,8 @@
-# My name is joan and this is my final project, Drivt (A blogging application)
+# DRIVT a blogging application
+
+#### Video Demo: https://youtu.be/Zl6NZaKM2Nc
+
+#### Description:
 
 ## Contents 
 
