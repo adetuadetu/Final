@@ -1,6 +1,6 @@
 # DRIVT a blogging application
 
-#### Video Demo: https://youtu.be/Zl6NZaKM2Nc
+
 
 #### Description:
 
