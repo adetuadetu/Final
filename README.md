@@ -14,8 +14,6 @@
 6. How User authentication is implemented
 7. Deployment using Docker
 
-
-
 ## 1. Templates
 
 ### What are templates?
