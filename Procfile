@@ -1,5 +1,5 @@
 web: waitress-serve \
---listen "*:$PORT" \
+--listen "8000" \
 --trusted-proxy '*' \
 --trusted-proxy-headers 'x-forwarded-for x-forwarded-proto x-forwarded-port' \
 --log-untrusted-proxy-headers \
