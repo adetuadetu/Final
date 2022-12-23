@@ -1,3 +1,3 @@
 web: waitress-serve \
---listen "8000" \
+--listen "*:$PORT" \
 flasky.py:wsgifunc
