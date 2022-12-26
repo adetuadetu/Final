@@ -1,1 +1,1 @@
-web: python flasky.py port="$PORT"
+web: waitress-serve --port=$PORT flasky:app
