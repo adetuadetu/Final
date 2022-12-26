@@ -1,1 +1,1 @@
-web: python flasky.py port="8000"
+web: python flasky.py port="$PORT"
