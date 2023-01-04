@@ -74,11 +74,7 @@ class HerokuConfig(ProductionConfig):
 
 
         # handle reverse proxy server headers
-        try:
-            from werkzeug.middleware.proxy_fix import ProxyFix
-        except ImportError:
-            from werkzeug.contrib.fixers import ProxyFix
-        app.wsgi_app = ProxyFix(app.wsgi_app)
+        
 
 
         # log to stderr
