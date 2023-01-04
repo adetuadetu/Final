@@ -1,1 +1,1 @@
--r requirements/docker.txt
+-r requirements/heroku.txt
