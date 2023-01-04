@@ -1,1 +1,1 @@
-web: waitress-serve --port=$PORT flasky:app
+web: venv/Scripts/waitress-serve --port=$PORT flasky:app
