@@ -44,6 +44,7 @@ lib50==3.0.4
 Mako==1.2.4
 Markdown==3.4.1
 MarkupSafe==2.1.1
+mysql==2.1.1
 multidict==6.0.2
 outcome==1.2.0
 packaging==22.0
