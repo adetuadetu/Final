@@ -24,6 +24,11 @@ class Config:
     def init_app(app):
         pass
 
+uri = os.getenv("DATABASE_URL")  # or other relevant config var 
+if uri.startswith("postgres://"):
+     uri = uri.replace("postgres://", "postgresql://", 1)
+
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
