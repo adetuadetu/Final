@@ -36,7 +36,7 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
 
 class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+    SQLALCHEMY_DATABASE_URI = os.environ.get('HEROKU_POSTGRESQL_COPPER_URL') or \
         'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 
 
