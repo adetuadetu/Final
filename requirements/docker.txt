@@ -1,4 +1,4 @@
 -r common.txt
 gunicorn==19.7.1
-PyMySQL==1.0.2
+PyMySQL==0.7.1
 waitress==2.0.0
